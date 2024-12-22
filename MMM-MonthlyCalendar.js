@@ -12,7 +12,15 @@ function el(tag, options) {
 }
 
 function addOneDay(d) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds());
+  return new Date(
+    d.getFullYear(),
+    d.getMonth(),
+    d.getDate() + 1,
+    d.getHours(),
+    d.getMinutes(),
+    d.getSeconds(),
+    d.getMilliseconds()
+  );
 }
 
 function diffDays(a, b) {
@@ -30,7 +38,7 @@ function getWeekNumber(d) {
   d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   d.setUTCDate(d.getUTCDate() + 4 - d.getUTCDay());
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
 }
 
 function formatEventTime(d) {
@@ -44,7 +52,7 @@ function formatEventTime(d) {
 }
 
 function equals(a, b) {
-  if (typeof (a) !== typeof (b)) {
+  if (typeof a !== typeof b) {
     return false;
   }
 
@@ -81,9 +89,11 @@ Module.register("MMM-MonthlyCalendar", {
     displaySymbol: false,
     wrapTitles: false,
     hideCalendars: [],
+    showLocations: [],
     luminanceThreshold: 110,
     multiDayEndingTimeSeparator: " until ",
-    hideDuplicateEvents: true
+    hideDuplicateEvents: true,
+    transform: (e) => {},
   },
 
   start: function () {
@@ -116,17 +126,23 @@ Module.register("MMM-MonthlyCalendar", {
             e.endDate = new Date(e.endDate.getTime() - 1000);
 
             if (e.startDate > e.endDate) {
-              e.startDate = new Date(e.endDate.getFullYear(), e.endDate.getMonth(), e.endDate.getDate(), 1);
+              e.startDate = new Date(
+                e.endDate.getFullYear(),
+                e.endDate.getMonth(),
+                e.endDate.getDate(),
+                1
+              );
             } else {
               e.startDate = new Date(e.startDate.getTime() + 60 * 60 * 1000);
             }
           }
 
           // If not a full-day event, check if it spans multiple days
-          if (((e.endDate.getTime() - e.startDate.getTime()) / 1000) > 86400) {
+          if ((e.endDate.getTime() - e.startDate.getTime()) / 1000 > 86400) {
             e.multiDayEvent = true;
           }
 
+          self.config.transform(e);
           return e;
         })
         .filter((e) => !self.config.hideCalendars.includes(e.calendarName));
@@ -153,7 +169,9 @@ Module.register("MMM-MonthlyCalendar", {
         if (self.config.hideDuplicateEvents) {
           const seenEvents = new Map(); // Hash table for deduplication
           self.events = self.events.filter((event) => {
-            const key = `${event.title}|${event.startDate.valueOf()}|${event.endDate.valueOf()}`;
+            const key = `${
+              event.title
+            }|${event.startDate.valueOf()}|${event.endDate.valueOf()}`;
             if (seenEvents.has(key)) {
               return false; // Duplicate
             }
@@ -163,7 +181,10 @@ Module.register("MMM-MonthlyCalendar", {
         }
 
         // Step 5: Update DOM if needed
-        if (today !== self.displayedDay || !equals(self.events, self.displayedEvents)) {
+        if (
+          today !== self.displayedDay ||
+          !equals(self.events, self.displayedEvents)
+        ) {
           self.displayedDay = today;
           self.displayedEvents = self.events;
           self.updateTimer = null;
@@ -179,19 +200,27 @@ Module.register("MMM-MonthlyCalendar", {
   },
 
   getDom: function () {
-    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const days = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
     const weeksToMonthDays = {
-      "nextoneweek": 0,
-      "currentweek": 0,
-      "oneweek": 0,
-      "twoweeks": 7,
-      "threeweeks": 14,
-      "fourweeks": 21,
-      "nextfourweeks": 21,
+      nextoneweek: 0,
+      currentweek: 0,
+      oneweek: 0,
+      twoweeks: 7,
+      threeweeks: 14,
+      fourweeks: 21,
+      nextfourweeks: 21,
     };
     const self = this;
     const now = new Date();
-    const table = el("table", { "className": "small wrapper" });
+    const table = el("table", { className: "small wrapper" });
     const today = now.getDate();
     const mode = self.config.mode.toLowerCase();
     let firstDayOfWeek = self.config.firstDayOfWeek.toLowerCase();
@@ -205,12 +234,15 @@ Module.register("MMM-MonthlyCalendar", {
       firstDayOfWeek = days[now.getDay()].toLowerCase();
     }
 
-    while (firstDayOfWeek !== days[0].toLowerCase() && startDayOffset < days.length) {
+    while (
+      firstDayOfWeek !== days[0].toLowerCase() &&
+      startDayOffset < days.length
+    ) {
       days.push(days.shift());
       ++startDayOffset;
     }
 
-    startDayOffset = (startDayOffset % 7);
+    startDayOffset = startDayOffset % 7;
 
     if (mode in weeksToMonthDays) {
       cellIndex = today - now.getDay() + startDayOffset;
@@ -224,35 +256,52 @@ Module.register("MMM-MonthlyCalendar", {
       } else if (mode === "nextmonth") {
         now.setMonth(now.getMonth() + 1);
       }
-      cellIndex = 1 - new Date(now.getFullYear(), now.getMonth(), 1).getDay() + startDayOffset;
-      monthDays = 32 - new Date(now.getFullYear(), now.getMonth(), 32).getDate();
+      cellIndex =
+        1 -
+        new Date(now.getFullYear(), now.getMonth(), 1).getDay() +
+        startDayOffset;
+      monthDays =
+        32 - new Date(now.getFullYear(), now.getMonth(), 32).getDate();
       while (cellIndex > 1) {
         cellIndex -= 7;
       }
     }
 
     if (self.config.showWeekNumber) {
-      row.appendChild(el("th", { "className": "weeknum" }));
+      row.appendChild(el("th", { className: "weeknum" }));
     }
 
     for (var day = 0; day < 7; ++day) {
-      const headerDate = new Date(now.getFullYear(), now.getMonth(), cellIndex + day);
-      row.appendChild(el("th", { "className": "header", "innerHTML": headerDate.toLocaleString(config.language, { weekday: "long" }) }));
+      const headerDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        cellIndex + day
+      );
+      row.appendChild(
+        el("th", {
+          className: "header",
+          innerHTML: headerDate.toLocaleString(config.language, {
+            weekday: "long",
+          }),
+        })
+      );
     }
     table.appendChild(row);
 
     for (var week = 0; week < 6 && cellIndex <= monthDays; ++week) {
-      row = el("tr", { "className": "xsmall" });
+      row = el("tr", { className: "xsmall" });
       if (self.config.showWeekNumber) {
         const weekDate = new Date(now.getFullYear(), now.getMonth(), cellIndex);
-        row.appendChild(el("td", { "className": "weeknum", "innerHTML": getWeekNumber(weekDate) }));
+        row.appendChild(
+          el("td", { className: "weeknum", innerHTML: getWeekNumber(weekDate) })
+        );
       }
 
       for (day = 0; day < 7; ++day, ++cellIndex) {
         var cellDate = new Date(now.getFullYear(), now.getMonth(), cellIndex);
         var cellDay = cellDate.getDate();
 
-        cell = el("td", { "className": "cell" });
+        cell = el("td", { className: "cell" });
         if (["lastmonth", "nextmonth"].includes(mode)) {
           // Do nothing
         } else if (cellIndex === today) {
@@ -264,10 +313,13 @@ Module.register("MMM-MonthlyCalendar", {
         }
 
         if ((week === 0 && day === 0) || cellDay === 1) {
-          cellDay = cellDate.toLocaleString(config.language, { month: "short", day: "numeric" });
+          cellDay = cellDate.toLocaleString(config.language, {
+            month: "short",
+            day: "numeric",
+          });
         }
 
-        cell.appendChild(el("div", { "innerHTML": cellDay }));
+        cell.appendChild(el("div", { innerHTML: cellDay }));
         row.appendChild(cell);
         dateCells[cellIndex] = cell;
       }
@@ -276,36 +328,76 @@ Module.register("MMM-MonthlyCalendar", {
     }
 
     var monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    var monthEnd = new Date(now.getFullYear(), now.getMonth(), monthDays, 23, 59, 59);
+    var monthEnd = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      monthDays,
+      23,
+      59,
+      59
+    );
     for (var i in self.events) {
       var e = self.events[i];
 
-      for (var eventDate = e.startDate; eventDate <= e.endDate; eventDate = addOneDay(eventDate)) {
+      for (
+        var eventDate = e.startDate;
+        eventDate <= e.endDate;
+        eventDate = addOneDay(eventDate)
+      ) {
         var dayDiff = diffDays(eventDate, monthStart);
 
         if (dayDiff in dateCells) {
-          let div = el("div", { "className": "event" });
+          let div = el("div", { className: "event" });
           if (!self.config.wrapTitles) {
             div.classList.add("event-nowrap");
           }
 
           // Print the time if it is NOT a full day event.
           // And if it is NOT the 2nd or later day of a multi-day event.
-          if (!e.fullDayEvent && !(e.multiDayEvent && (eventDate > e.startDate))) {
-            div.appendChild(el("span", { "className": "event-label", "innerText": formatEventTime(e.startDate) }));
+          if (
+            !e.fullDayEvent &&
+            !(e.multiDayEvent && eventDate > e.startDate)
+          ) {
+            div.appendChild(
+              el("span", {
+                className: "event-label",
+                innerText: formatEventTime(e.startDate),
+              })
+            );
           }
 
           if (self.config.displaySymbol) {
             for (let symbol of e.symbol) {
-              div.appendChild(el("span", { "className": `event-label fa fa-${symbol}` }));
+              div.appendChild(
+                el("span", { className: `event-label fa fa-${symbol}` })
+              );
             }
           }
 
-          div.appendChild(el("span", { "innerText": e.title }));
+          div.appendChild(el("span", { innerText: e.title }));
+          if (
+            e.location &&
+            self.config.showLocations.includes(e.calendarName)
+          ) {
+            div.appendChild(document.createElement("br"));
+            div.appendChild(
+              el("span", { innerText: "at " + e.location, className: "event-location" })
+            );
+          }
 
           // Print ending time if last day of multi-day event.
-          if (e.multiDayEvent && (eventDate.toDateString() == e.endDate.toDateString())) {
-            div.appendChild(el("span", { "className": "event-label", "innerText": self.config.multiDayEndingTimeSeparator + formatEventTime(e.endDate) }));
+          if (
+            e.multiDayEvent &&
+            eventDate.toDateString() == e.endDate.toDateString()
+          ) {
+            div.appendChild(
+              el("span", {
+                className: "event-label",
+                innerText:
+                  self.config.multiDayEndingTimeSeparator +
+                  formatEventTime(e.endDate),
+              })
+            );
           }
 
           if (e.color) {
@@ -313,7 +405,10 @@ Module.register("MMM-MonthlyCalendar", {
 
             if (e.fullDayEvent || e.multiDayEvent) {
               div.style.backgroundColor = c;
-              if (getLuminance(div.style.backgroundColor) >= self.config.luminanceThreshold) {
+              if (
+                getLuminance(div.style.backgroundColor) >=
+                self.config.luminanceThreshold
+              ) {
                 div.className += " event-lightbackground";
               } else {
                 div.className += " event-darkbackground";

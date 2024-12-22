@@ -19,6 +19,8 @@
 
 .MMM-MonthlyCalendar .today {
   background-color: rgba(192, 192, 192, 0.2);
+  border-color: rgba(192, 192, 192);
+  border-width: 10px;
 }
 
 .MMM-MonthlyCalendar .event {
@@ -38,6 +40,13 @@
   padding-right: 0.5ex;
 }
 
+.MMM-MonthlyCalendar .event-location {
+  /* font-size: 0.75em; */
+  padding-left: 3ex;
+  padding-right: 0.5ex;
+  font-weight: lighter;
+}
+
 .MMM-MonthlyCalendar .event-lightbackground {
   color: black;
 }
@@ -49,4 +58,3 @@
 .MMM-MonthlyCalendar .past-date {
   filter: brightness(75%);
 }
-
