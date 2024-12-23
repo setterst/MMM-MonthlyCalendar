@@ -93,7 +93,8 @@ Module.register("MMM-MonthlyCalendar", {
     luminanceThreshold: 110,
     multiDayEndingTimeSeparator: " until ",
     hideDuplicateEvents: true,
-    transform: (e) => {},
+    transformEvent: (e) => {},
+    transformDateDiv: (date, div) => {},
   },
 
   start: function () {
@@ -142,7 +143,7 @@ Module.register("MMM-MonthlyCalendar", {
             e.multiDayEvent = true;
           }
 
-          self.config.transform(e);
+          self.config.transformEvent(e);
           return e;
         })
         .filter((e) => !self.config.hideCalendars.includes(e.calendarName));
@@ -288,6 +289,9 @@ Module.register("MMM-MonthlyCalendar", {
     }
     table.appendChild(row);
 
+    let cellDateStart = new Date(now.getFullYear(), now.getMonth(), cellIndex);
+    let cellIndexStart = cellIndex;
+
     for (var week = 0; week < 6 && cellIndex <= monthDays; ++week) {
       row = el("tr", { className: "xsmall" });
       if (self.config.showWeekNumber) {
@@ -379,9 +383,12 @@ Module.register("MMM-MonthlyCalendar", {
             e.location &&
             self.config.showLocations.includes(e.calendarName)
           ) {
-            div.appendChild(document.createElement("br"));
+            div.appendChild(el("br"));
             div.appendChild(
-              el("span", { innerText: "at " + e.location, className: "event-location" })
+              el("span", {
+                innerText: "at " + e.location,
+                className: "event-location",
+              })
             );
           }
 
@@ -420,6 +427,15 @@ Module.register("MMM-MonthlyCalendar", {
 
           dateCells[dayDiff].appendChild(div);
         }
+      }
+    }
+
+    for (var i = 0; i < 6 * 7; i++) {
+      let cell = dateCells[cellIndexStart + i];
+      if (cell) {
+        let d = new Date(cellDateStart);
+        d.setDate(d.getDate() + i);
+        self.config.transformDateDiv(d, cell);
       }
     }
 
